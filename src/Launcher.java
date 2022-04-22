@@ -1,20 +1,45 @@
-import com.mysql.cj.jdbc.MysqlDataSource;
-import net.codejava.networking.HttpDownload;
+import net.sql.forumPosts;
+import net.sql.playersOnline;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
+import java.io.File;
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Locale;
 
+
 public class Launcher {
 
     private JFrame primalLauncher;
+
+    private String launcherName = "Primal Launcher";
+    public static String welcomeText = "Welcome to Primal Launcher!";
+    public static String websiteURL = "https://primal.ps/";
+    public static String forumURL = "https://primal.ps/forum";
+    public static String voteURL = "https://primal.ps/vote";
+    public static String hiscoresURL = "https://primal.ps/hiscores";
+    public static String storeURL = "https://primal.ps/store";
+    public static String discordURL = "https://discord.gg/4jTb6Y3";
+    public static String youtubeURL = "https://youtube.com/ProjectPrimal";
+
+    private String clientVersion = "CLIENT VERSION: ";
+
+    public static String jarName = "primal.jar";
+    public static String gameDownloadUrl = "http://157.245.143.62/dl/primal.jar";
+    public static String homeDir = System.getProperty("user.home");
+    public static String saveDir = homeDir + File.separator + ".primal";
+    public static String gameSaveLocation = saveDir + File.separator + jarName;
 
     public static void main(String args[]) {
         EventQueue.invokeLater(() -> {
@@ -28,20 +53,72 @@ public class Launcher {
         });
     }
 
-    public static void openWebpage(String urlString) {
-        try {
-            Desktop.getDesktop().browse(new URL(urlString).toURI());
-        } catch (Exception e) {
-            e.printStackTrace();
+    public class MoveListener implements MouseListener, MouseMotionListener {
+
+        private Point pressedPoint;
+        private Rectangle frameBounds;
+
+        @Override
+        public void mouseClicked(MouseEvent event) {
         }
+
+        @Override
+        public void mousePressed(MouseEvent event) {
+            this.frameBounds = primalLauncher.getBounds();
+            this.pressedPoint = event.getPoint();
+        }
+
+        @Override
+        public void mouseReleased(MouseEvent event) {
+            moveJFrame(event);
+        }
+
+        @Override
+        public void mouseEntered(MouseEvent event) {
+        }
+
+        @Override
+        public void mouseExited(MouseEvent event) {
+        }
+
+        @Override
+        public void mouseDragged(MouseEvent event) {
+            moveJFrame(event);
+        }
+
+        @Override
+        public void mouseMoved(MouseEvent event) {
+        }
+
+        private void moveJFrame(MouseEvent event) {
+            Point endPoint = event.getPoint();
+
+            int xDiff = endPoint.x - pressedPoint.x;
+            int yDiff = endPoint.y - pressedPoint.y;
+            frameBounds.x += xDiff;
+            frameBounds.y += yDiff;
+            primalLauncher.setBounds(frameBounds);
+        }
+
     }
 
-
-    public Launcher() throws IOException, FontFormatException, SQLException {
+    public Launcher() throws SQLException, IOException {
         initialize();
     }
 
-    private void initialize() throws IOException, FontFormatException, SQLException {
+    public void initialize() throws SQLException, IOException {
+
+        URL primalDownload_URL = new URL(gameDownloadUrl);
+        Download primalJar = new Download(primalDownload_URL);
+        HttpURLConnection httpConnection = (HttpURLConnection) primalDownload_URL.openConnection();
+        httpConnection.setRequestMethod("HEAD");
+        httpConnection.connect();
+        long lastModifiedWeb = httpConnection.getLastModified();
+        httpConnection.disconnect();
+        File jarFile = new File(gameSaveLocation);
+        boolean exists = jarFile.exists();
+        long lastModifiedLocal = jarFile.lastModified();
+
         primalLauncher = new JFrame();
         primalLauncher.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         primalLauncher.setUndecorated(true);
@@ -49,7 +126,7 @@ public class Launcher {
         primalLauncher.setBackground(new Color(255, 255, 255));
         primalLauncher.setVisible(true);
         primalLauncher.setIconImage(Toolkit.getDefaultToolkit().getImage(Launcher.class.getResource("/img/nav-panel/logo-icon.png")));
-        primalLauncher.getContentPane().setName("Primal Launcher");
+        primalLauncher.getContentPane().setName(launcherName);
         primalLauncher.setResizable(false);
         primalLauncher.setBounds(0, 0, 840, 560);
         primalLauncher.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -129,115 +206,74 @@ public class Launcher {
         YoutubeButton.setBounds(73, 522, 22, 17);
         main.add(YoutubeButton);
 
-        JLabel PlayButton = new JLabel("");
-        PlayButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        PlayButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/download-bar/Play-BTN.png")));
-        PlayButton.setBounds(607, 466, 213, 60);
-        main.add(PlayButton);
-
         JLabel ProgressBar = new JLabel("");
         ProgressBar.setIcon(new ImageIcon(Launcher.class.getResource("/img/download-bar/download-progress-bar-full.png")));
         ProgressBar.setBounds(146, 472, 434, 20);
-        main.add(ProgressBar);
+        //main.add(ProgressBar);
 
         //Font customFont = Font.createFont(Font.TRUETYPE_FONT, new File("img/OpenSans-Regular.ttf")).deriveFont(12f);
-        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        //GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         //ge.registerFont(customFont);
 
-        JLabel titleLeft = new JLabel("Welcome to Primal Launcher!");
+        JLabel titleLeft = new JLabel(welcomeText);
         titleLeft.setBounds(27, 9, 175, 12);
         titleLeft.setForeground(new Color(109, 154, 185));
         main.add(titleLeft);
-
-        MysqlDataSource gameSource = new MysqlDataSource();
-        gameSource.setUser("primal_reader");
-        gameSource.setPassword("5LHos2YkxI3lRsHS");
-        gameSource.setServerName("157.245.143.62");
-        gameSource.setDatabaseName("primal");
-        Connection conn3 = gameSource.getConnection();
-        Statement stmt3 = conn3.createStatement();
-        String query3 = "SELECT * FROM `statistics_online` WHERE 1";
-        ResultSet rs3 = stmt3.executeQuery(query3);
-
-
-        while (rs3.next()) {
-            int playersOnline = rs3.getInt("online");
-
-            JLabel playerOnline = new JLabel(playersOnline + " Other Players Online");
-            playerOnline.setBounds(634, 9, 175, 12);
-            playerOnline.setForeground(new Color(109, 154, 185));
-            main.add(playerOnline);
-        }
-
 
         JLabel playerIcon = new JLabel("");
         playerIcon.setIcon(new ImageIcon(Launcher.class.getResource("/img/top-panel/user-icon.png")));
         playerIcon.setBounds(621, 11, 9, 10);
         main.add(playerIcon);
 
-        JLabel downloadInfo = new JLabel("Primal is up to date.");
+
+        JLabel downloadPercent = new JLabel("");
+        downloadPercent.setBounds(525, 505, 208, 14);
+        downloadPercent.setForeground(new Color(109, 154, 185));
+        main.add(downloadPercent);
+
+        JLabel downloadInfo = new JLabel(updateGame.getUpdateStatus());
         downloadInfo.setBounds(141, 505, 208, 14);
         downloadInfo.setForeground(new Color(228, 191, 111));
         main.add(downloadInfo);
 
-        JLabel downloadPercent = new JLabel("100%");
-        downloadPercent.setBounds(554, 505, 208, 14);
-        downloadPercent.setForeground(new Color(109, 154, 185));
-        main.add(downloadPercent);
+        String[] optionsToChoose = {"LIVE", "Beta", "Development"};
+        JComboBox<String> jComboBox = new JComboBox<>(optionsToChoose);
+        jComboBox.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        jComboBox.setBounds(141, 525, 115, 20);
+        jComboBox.setForeground(new Color(228, 191, 111));
+        jComboBox.setBackground(new Color(52, 84, 111));
+        jComboBox.setFocusable(false);
+        main.add(jComboBox);
 
-        String fileURL = "https://primal.ps/dl/version.txt";
-        String homeDir = System.getProperty("user.home");
-        String saveDir = homeDir + File.separator + ".primal";
-        String txtName = "version.txt";
-
-
-        File directory = new File(saveDir);
-        if (!directory.exists()) {
-            directory.mkdir();
+        JLabel PlayButton = new JLabel("");
+        PlayButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        if (exists & lastModifiedWeb < lastModifiedLocal) {
+            PlayButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/download-bar/Play-BTN.png")));
+        } else {
+            PlayButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/download-bar/Play-BTN-update.png")));
         }
+        PlayButton.setBounds(607, 466, 213, 60);
+        main.add(PlayButton);
 
-        try {
-            HttpDownload.downloadFile(fileURL, saveDir);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-        File file = new File(saveDir + File.separator + txtName);
+        JLabel playerOnline = new JLabel(playersOnline.getOnline() + " Other Players Online");
+        playerOnline.setBounds(634, 9, 175, 12);
+        playerOnline.setForeground(new Color(109, 154, 185));
+        main.add(playerOnline);
 
-        BufferedReader br = null;
-        try {
-            br = new BufferedReader(new FileReader(file));
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
+        JLabel clientVersion = new JLabel("clientVersion");
+        clientVersion.setBounds(607, 535, 208, 14);
+        clientVersion.setForeground(new Color(155, 151, 144, 119));
+        clientVersion.setHorizontalAlignment(SwingConstants.CENTER);
+        main.add(clientVersion);
 
-        String st = null;
-        while (true) {
-            try {
-                if (!((st = br.readLine()) != null)) break;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            System.out.println(st);
+        JProgressBar dynamicProgressBar = new JProgressBar(0,100);
+        dynamicProgressBar.setBounds(146, 472, 434, 20);
+        dynamicProgressBar.setForeground(new Color(52, 84, 111));
+        dynamicProgressBar.setBorderPainted(false);
+        dynamicProgressBar.setBackground(new Color(5,13,19));
+        main.add(dynamicProgressBar);
 
-
-            JLabel clientVersion = new JLabel("CLIENT VERSION: " + st);
-            clientVersion.setBounds(607, 535, 208, 14);
-            clientVersion.setForeground(new Color(155, 151, 144, 119));
-            clientVersion.setHorizontalAlignment(SwingConstants.CENTER);
-            main.add(clientVersion);
-        }
-
-        MysqlDataSource dataSource = new MysqlDataSource();
-        dataSource.setUser("primal_reader");
-        dataSource.setPassword("5LHos2YkxI3lRsHS");
-        dataSource.setServerName("157.245.143.62");
-        dataSource.setDatabaseName("primal_forum");
-        Connection conn = dataSource.getConnection();
-        Statement stmt = conn.createStatement();
-        String query = "SELECT * FROM forums_topics INNER JOIN forums_posts ON forums_topics.tid = forums_posts.topic_id WHERE forum_id='7' AND author_name='Primal' OR forum_id='7' AND author_name='Sly' OR forum_id='7' AND author_name='Stars' ORDER BY tid DESC LIMIT 2";
-        ResultSet rs = stmt.executeQuery(query);
-
-
+        ResultSet rs = forumPosts.getAnnouncements();
         int count = 0;
         while (rs.next()) {
             ++count;
@@ -247,8 +283,7 @@ public class Launcher {
             String postText = rs.getString("post");
             String strippedText = postText.replaceAll("<!--.*?-->", "").replaceAll("<[^>]+>", "");
             String cutText = strippedText.substring(0, 250);
-            LocalDate ld = Instant.ofEpochMilli(postDateLong*1000)
-                    .atZone(ZoneId.systemDefault()).toLocalDate();
+            LocalDate ld = Instant.ofEpochMilli(postDateLong * 1000).atZone(ZoneId.systemDefault()).toLocalDate();
             if (count == 1) {
                 JLabel threadTitle1 = new JLabel(title);
                 threadTitle1.setBounds(160, 155, 262, 14);
@@ -270,13 +305,15 @@ public class Launcher {
                 main.add(postTextData);
                 readPost1.addMouseListener(new MouseAdapter() {
                     @Override
-                    public void mousePressed(MouseEvent e){
-                        openWebpage("https://primal.ps/forum/index.php?app=forums&module=forums&controller=topic&id=" + threadID);
+                    public void mousePressed(MouseEvent e) {
+                        openURL.open(forumURL + "/index.php?app=forums&module=forums&controller=topic&id=" + threadID);
                     }
+
                     @Override
                     public void mouseEntered(MouseEvent e) {
                         readPost1.setIcon(new ImageIcon(Launcher.class.getResource("/img/news/read-btn-hover.png")));
                     }
+
                     public void mouseExited(MouseEvent e) {
                         readPost1.setIcon(new ImageIcon(Launcher.class.getResource("/img/news/read-btn.png")));
                     }
@@ -303,13 +340,15 @@ public class Launcher {
                 main.add(postTextData);
                 readPost1.addMouseListener(new MouseAdapter() {
                     @Override
-                    public void mousePressed(MouseEvent e){
-                        openWebpage("https://primal.ps/forum/index.php?app=forums&module=forums&controller=topic&id=" + threadID);
+                    public void mousePressed(MouseEvent e) {
+                        openURL.open(forumURL + "/index.php?app=forums&module=forums&controller=topic&id=" + threadID);
                     }
+
                     @Override
                     public void mouseEntered(MouseEvent e) {
                         readPost1.setIcon(new ImageIcon(Launcher.class.getResource("/img/news/read-btn-hover.png")));
                     }
+
                     public void mouseExited(MouseEvent e) {
                         readPost1.setIcon(new ImageIcon(Launcher.class.getResource("/img/news/read-btn.png")));
                     }
@@ -319,24 +358,15 @@ public class Launcher {
                 return;
             }
         }
-
-
-
         rs.close();
-        stmt.close();
-        conn.close();
 
-        Connection conn2 = dataSource.getConnection();
-        Statement stmt2 = conn2.createStatement();
-        String query2 = "SELECT title,starter_name,tid FROM `forums_topics` WHERE approved=1 ORDER BY start_date DESC LIMIT 5";
-        ResultSet rs2 = stmt2.executeQuery(query2);
-
+        rs = forumPosts.getPosts();
         int count2 = 0;
-        while (rs2.next()) {
+        while (rs.next()) {
             ++count2;
-            String title = rs2.getString("title");
-            String posterName = rs2.getString("starter_name");
-            int threadID = rs2.getInt("tid");
+            String title = rs.getString("title");
+            String posterName = rs.getString("starter_name");
+            int threadID = rs.getInt("tid");
             if (count2 == 1) {
                 JLabel threadTitle1 = new JLabel(title);
                 threadTitle1.setBounds(622, 160, 150, 14);
@@ -349,8 +379,8 @@ public class Launcher {
                 main.add(postDate);
                 threadTitle1.addMouseListener(new MouseAdapter() {
                     @Override
-                    public void mousePressed(MouseEvent e){
-                        openWebpage("https://primal.ps/forum/index.php?app=forums&module=forums&controller=topic&id=" + threadID);
+                    public void mousePressed(MouseEvent e) {
+                        openURL.open(forumURL + "/index.php?app=forums&module=forums&controller=topic&id=" + threadID);
                     }
                 });
             } else if (count2 == 2) {
@@ -365,8 +395,8 @@ public class Launcher {
                 main.add(postDate);
                 threadTitle1.addMouseListener(new MouseAdapter() {
                     @Override
-                    public void mousePressed(MouseEvent e){
-                        openWebpage("https://primal.ps/forum/index.php?app=forums&module=forums&controller=topic&id=" + threadID);
+                    public void mousePressed(MouseEvent e) {
+                        openURL.open(forumURL + "/index.php?app=forums&module=forums&controller=topic&id=" + threadID);
                     }
                 });
             } else if (count2 == 3) {
@@ -381,8 +411,8 @@ public class Launcher {
                 main.add(postDate);
                 threadTitle1.addMouseListener(new MouseAdapter() {
                     @Override
-                    public void mousePressed(MouseEvent e){
-                        openWebpage("https://primal.ps/forum/index.php?app=forums&module=forums&controller=topic&id=" + threadID);
+                    public void mousePressed(MouseEvent e) {
+                        openURL.open(forumURL + "/index.php?app=forums&module=forums&controller=topic&id=" + threadID);
                     }
                 });
             } else if (count2 == 4) {
@@ -397,8 +427,8 @@ public class Launcher {
                 main.add(postDate);
                 threadTitle1.addMouseListener(new MouseAdapter() {
                     @Override
-                    public void mousePressed(MouseEvent e){
-                        openWebpage("https://primal.ps/forum/index.php?app=forums&module=forums&controller=topic&id=" + threadID);
+                    public void mousePressed(MouseEvent e) {
+                        openURL.open(forumURL + "/index.php?app=forums&module=forums&controller=topic&id=" + threadID);
                     }
                 });
             } else if (count2 == 5) {
@@ -413,20 +443,15 @@ public class Launcher {
                 main.add(postDate);
                 threadTitle1.addMouseListener(new MouseAdapter() {
                     @Override
-                    public void mousePressed(MouseEvent e){
-                        openWebpage("https://primal.ps/forum/index.php?app=forums&module=forums&controller=topic&id=" + threadID);
+                    public void mousePressed(MouseEvent e) {
+                        openURL.open(forumURL + "/forum/index.php?app=forums&module=forums&controller=topic&id=" + threadID);
                     }
                 });
             } else {
                 return;
             }
         }
-
-
-
-        rs2.close();
-        stmt2.close();
-        conn2.close();
+        rs.close();
 
         JLabel Background = new JLabel("");
         Background.setIcon(new ImageIcon(Launcher.class.getResource("/img/background-with-assets.png")));
@@ -435,135 +460,168 @@ public class Launcher {
 
         IconButton.addMouseListener(new MouseAdapter() {
             @Override
-            public void mousePressed(MouseEvent e){
-                openWebpage("https://primal.ps/");
+            public void mousePressed(MouseEvent e) {
+                openURL.open(websiteURL);
             }
+
             @Override
             public void mouseEntered(MouseEvent e) {
                 IconButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/nav-panel/logo-icon.png")));
             }
+
             public void mouseExited(MouseEvent e) {
                 IconButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/nav-panel/logo-icon.png")));
             }
         });
-
         ForumButton.addMouseListener(new MouseAdapter() {
             @Override
-            public void mousePressed(MouseEvent e){
-                openWebpage("https://primal.ps/forum");
+            public void mousePressed(MouseEvent e) {
+                openURL.open(forumURL);
             }
+
             @Override
             public void mouseEntered(MouseEvent e) {
                 ForumButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/nav-panel/Forums-hover.png")));
             }
+
             public void mouseExited(MouseEvent e) {
                 ForumButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/nav-panel/Forums.png")));
             }
         });
-
         VoteButton.addMouseListener(new MouseAdapter() {
             @Override
-            public void mousePressed(MouseEvent e){
-                openWebpage("https://primal.ps/vote");
+            public void mousePressed(MouseEvent e) {
+                openURL.open(voteURL);
             }
+
             @Override
             public void mouseEntered(MouseEvent e) {
                 VoteButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/nav-panel/Vote-hover.png")));
             }
+
             public void mouseExited(MouseEvent e) {
                 VoteButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/nav-panel/Vote.png")));
             }
         });
-
         HiscoresButton.addMouseListener(new MouseAdapter() {
             @Override
-            public void mousePressed(MouseEvent e){
-                openWebpage("https://primal.ps/hiscores");
+            public void mousePressed(MouseEvent e) {
+                openURL.open(hiscoresURL);
             }
+
             @Override
             public void mouseEntered(MouseEvent e) {
                 HiscoresButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/nav-panel/hiscores-hover.png")));
             }
+
             public void mouseExited(MouseEvent e) {
                 HiscoresButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/nav-panel/hiscores.png")));
             }
         });
-
         StoreButton.addMouseListener(new MouseAdapter() {
             @Override
-            public void mousePressed(MouseEvent e){
-                openWebpage("https://primal.ps/store");
+            public void mousePressed(MouseEvent e) {
+                openURL.open(storeURL);
             }
+
             @Override
             public void mouseEntered(MouseEvent e) {
                 StoreButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/nav-panel/store-hover.png")));
             }
+
             public void mouseExited(MouseEvent e) {
                 StoreButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/nav-panel/store.png")));
             }
         });
-
         DiscordButton.addMouseListener(new MouseAdapter() {
             @Override
-            public void mousePressed(MouseEvent e){
-                openWebpage("https://discord.gg/4jTb6Y3");
+            public void mousePressed(MouseEvent e) {
+                openURL.open(discordURL);
             }
+
             @Override
             public void mouseEntered(MouseEvent e) {
                 DiscordButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/nav-panel/discord-hover.png")));
             }
+
             public void mouseExited(MouseEvent e) {
                 DiscordButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/nav-panel/discord.png")));
             }
         });
-
         YoutubeButton.addMouseListener(new MouseAdapter() {
             @Override
-            public void mousePressed(MouseEvent e){
-                openWebpage("https://youtube.com/ProjectPrimal");
+            public void mousePressed(MouseEvent e) {
+                openURL.open(youtubeURL);
             }
+
             @Override
             public void mouseEntered(MouseEvent e) {
                 YoutubeButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/nav-panel/youtube-hover.png")));
             }
+
             public void mouseExited(MouseEvent e) {
                 YoutubeButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/nav-panel/youtube.png")));
             }
         });
 
+
+
         PlayButton.addMouseListener(new MouseAdapter() {
             @Override
-            public void mousePressed(MouseEvent e){
-                String fileURL = "https://primal.ps/dl/primal.jar";
-                String homeDir = System.getProperty("user.home");
-                String saveDir = homeDir + File.separator + ".primal";
-                String jarName = "primal.jar";
+            public void mousePressed(MouseEvent e) {
+                if (exists & lastModifiedWeb < lastModifiedLocal) {
+                    System.out.println("Game file exists and is most up to date");
+                } else {
+                    System.out.println("Game file is missing or need to be updated");
+                    primalJar.start();
+                    int percentComplete;
+                    downloadPercent.setText("Updating...");
+                    downloadPercent.update(downloadPercent.getGraphics());
+                    while (primalJar.getProgress() < 100.0f) {
+                        percentComplete = Math.round(primalJar.getProgress());
+                        System.out.println(percentComplete);
+                        dynamicProgressBar.setValue(percentComplete);
+                        dynamicProgressBar.update(dynamicProgressBar.getGraphics());
 
-                File directory = new File(saveDir);
-                if (!directory.exists()) {
-                    directory.mkdir();
+                    }
+
+                    if (primalJar.getStatus() == Download.COMPLETE) {
+                        downloadPercent.setText("Updated!");
+                        downloadPercent.update(downloadPercent.getGraphics());
+                        dynamicProgressBar.setValue(100);
+                        dynamicProgressBar.update(dynamicProgressBar.getGraphics());
+                    }
+
                 }
 
-                try {
-                    HttpDownload.downloadFile(fileURL, saveDir);
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                }
-
-                ProcessBuilder pb = new ProcessBuilder("java", "-jar", saveDir + File.separator + jarName);
-                try {
-                    Process p = pb.start();
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                }
+                System.out.println(primalJar.getStatus());
+                System.out.println(primalJar.getSize());
+                System.out.println(primalJar.getUrl());
 
             }
-            @Override
+
             public void mouseEntered(MouseEvent e) {
-                PlayButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/download-bar/Play-BTN.png")));
+                if (exists & lastModifiedWeb < lastModifiedLocal) {
+                    PlayButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/download-bar/Play-BTN-hover.png")));
+                } else {
+                    PlayButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/download-bar/Play-BTN-update-hover.png")));
+                }
+                if (primalJar.getStatus() == Download.COMPLETE) {
+                    PlayButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/download-bar/Play-BTN-hover.png")));
+                }
+
             }
+
             public void mouseExited(MouseEvent e) {
-                PlayButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/download-bar/Play-BTN-hover.png")));
+                if (exists & lastModifiedWeb < lastModifiedLocal) {
+                    PlayButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/download-bar/Play-BTN.png")));
+                } else {
+                    PlayButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/download-bar/Play-BTN-update.png")));
+                }
+                if (primalJar.getStatus() == Download.COMPLETE) {
+                    PlayButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/download-bar/Play-BTN-hover.png")));
+                }
+
             }
         });
 
@@ -583,72 +641,18 @@ public class Launcher {
                 CloseButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/top-panel/Close-window.png")));
             }
         });
-
         MinButton.addMouseListener(new MouseAdapter() {
-            @Override
             public void mouseClicked(MouseEvent arg0) {
                 primalLauncher.setState(primalLauncher.ICONIFIED);
             }
 
-            @Override
             public void mouseEntered(MouseEvent e) {
                 MinButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/top-panel/minimize-window-hover.png")));
             }
 
-            @Override
             public void mouseExited(MouseEvent e) {
                 MinButton.setIcon(new ImageIcon(Launcher.class.getResource("/img/top-panel/minimize-window.png")));
             }
         });
     }
-
-    public class MoveListener implements MouseListener, MouseMotionListener {
-
-        private Point pressedPoint;
-        private Rectangle frameBounds;
-
-        @Override
-        public void mouseClicked(MouseEvent event) {
-        }
-
-        @Override
-        public void mousePressed(MouseEvent event) {
-            this.frameBounds = primalLauncher.getBounds();
-            this.pressedPoint = event.getPoint();
-        }
-
-        @Override
-        public void mouseReleased(MouseEvent event) {
-            moveJFrame(event);
-        }
-
-        @Override
-        public void mouseEntered(MouseEvent event) {
-        }
-
-        @Override
-        public void mouseExited(MouseEvent event) {
-        }
-
-        @Override
-        public void mouseDragged(MouseEvent event) {
-            moveJFrame(event);
-        }
-
-        @Override
-        public void mouseMoved(MouseEvent event) {
-        }
-
-        private void moveJFrame(MouseEvent event) {
-            Point endPoint = event.getPoint();
-
-            int xDiff = endPoint.x - pressedPoint.x;
-            int yDiff = endPoint.y - pressedPoint.y;
-            frameBounds.x += xDiff;
-            frameBounds.y += yDiff;
-            primalLauncher.setBounds(frameBounds);
-        }
-
-    }
-
 }
