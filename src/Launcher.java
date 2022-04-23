@@ -1,3 +1,4 @@
+import net.http.HttpDownload;
 import net.sql.forumPosts;
 import net.sql.playersOnline;
 
@@ -7,8 +8,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.sql.ResultSet;
@@ -118,6 +118,10 @@ public class Launcher {
         File jarFile = new File(gameSaveLocation);
         boolean exists = jarFile.exists();
         long lastModifiedLocal = jarFile.lastModified();
+        File saveDirectory = new File (saveDir);
+        if (!saveDirectory.exists()){
+            saveDirectory.mkdirs();
+        }
 
         primalLauncher = new JFrame();
         primalLauncher.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -227,11 +231,15 @@ public class Launcher {
 
 
         JLabel downloadPercent = new JLabel("");
-        downloadPercent.setBounds(525, 505, 208, 14);
         downloadPercent.setForeground(new Color(109, 154, 185));
         main.add(downloadPercent);
 
-        JLabel downloadInfo = new JLabel(updateGame.getUpdateStatus());
+        JLabel downloadInfo = new JLabel("");
+        if (exists & lastModifiedWeb < lastModifiedLocal) {
+            downloadInfo.setText("Primal is up to date!");
+        } else {
+            downloadInfo.setText("Please update Primal!");
+        }
         downloadInfo.setBounds(141, 505, 208, 14);
         downloadInfo.setForeground(new Color(228, 191, 111));
         main.add(downloadInfo);
@@ -243,7 +251,7 @@ public class Launcher {
         jComboBox.setForeground(new Color(228, 191, 111));
         jComboBox.setBackground(new Color(52, 84, 111));
         jComboBox.setFocusable(false);
-        main.add(jComboBox);
+        //main.add(jComboBox);
 
         JLabel PlayButton = new JLabel("");
         PlayButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -260,17 +268,58 @@ public class Launcher {
         playerOnline.setForeground(new Color(109, 154, 185));
         main.add(playerOnline);
 
-        JLabel clientVersion = new JLabel("clientVersion");
-        clientVersion.setBounds(607, 535, 208, 14);
-        clientVersion.setForeground(new Color(155, 151, 144, 119));
-        clientVersion.setHorizontalAlignment(SwingConstants.CENTER);
-        main.add(clientVersion);
+        String fileURL = "http://157.245.143.62/dl/LIVE_version.txt";
+        String homeDir = System.getProperty("user.home");
+        String saveDir = homeDir + File.separator + ".primal";
+        String txtName = "LIVE_version.txt";
+
+
+        File directory = new File(saveDir);
+        if (!directory.exists()) {
+            directory.mkdir();
+        }
+
+        try {
+            HttpDownload.downloadFile(fileURL, saveDir);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        File file = new File(saveDir + File.separator + txtName);
+
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(new FileReader(file));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        String st = null;
+        while (true) {
+            try {
+                if (!((st = br.readLine()) != null)) break;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            System.out.println(st);
+
+
+            JLabel clientVersion = new JLabel("CLIENT VERSION: " + st);
+            clientVersion.setBounds(607, 535, 208, 14);
+            clientVersion.setForeground(new Color(155, 151, 144, 119));
+            clientVersion.setHorizontalAlignment(SwingConstants.CENTER);
+            main.add(clientVersion);
+        }
 
         JProgressBar dynamicProgressBar = new JProgressBar(0,100);
         dynamicProgressBar.setBounds(146, 472, 434, 20);
         dynamicProgressBar.setForeground(new Color(52, 84, 111));
         dynamicProgressBar.setBorderPainted(false);
         dynamicProgressBar.setBackground(new Color(5,13,19));
+        if (exists & lastModifiedWeb < lastModifiedLocal) {
+            dynamicProgressBar.setValue(100);
+        } else {
+            dynamicProgressBar.setValue(0);
+        }
         main.add(dynamicProgressBar);
 
         ResultSet rs = forumPosts.getAnnouncements();
@@ -564,18 +613,38 @@ public class Launcher {
             }
         });
 
-
-
         PlayButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
+                if (!saveDirectory.exists()){
+                    saveDirectory.mkdirs();
+                }
+                long lastModifiedWeb = httpConnection.getLastModified();
+                httpConnection.disconnect();
+                File jarFile = new File(gameSaveLocation);
+                boolean exists = jarFile.exists();
+                long lastModifiedLocal = jarFile.lastModified();
                 if (exists & lastModifiedWeb < lastModifiedLocal) {
                     System.out.println("Game file exists and is most up to date");
+                    try {
+                        Desktop.getDesktop().open(new File(gameSaveLocation));
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                    /*try {
+                        runJar.run(gameSaveLocation);
+
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    } catch (InterruptedException ex) {
+                        ex.printStackTrace();
+                    }                     */
                 } else {
                     System.out.println("Game file is missing or need to be updated");
                     primalJar.start();
                     int percentComplete;
                     downloadPercent.setText("Updating...");
+                    downloadPercent.setBounds(525, 505, 208, 14);
                     downloadPercent.update(downloadPercent.getGraphics());
                     while (primalJar.getProgress() < 100.0f) {
                         percentComplete = Math.round(primalJar.getProgress());
@@ -587,17 +656,12 @@ public class Launcher {
 
                     if (primalJar.getStatus() == Download.COMPLETE) {
                         downloadPercent.setText("Updated!");
+                        downloadPercent.setBounds(530, 505, 208, 14);
                         downloadPercent.update(downloadPercent.getGraphics());
                         dynamicProgressBar.setValue(100);
                         dynamicProgressBar.update(dynamicProgressBar.getGraphics());
                     }
-
                 }
-
-                System.out.println(primalJar.getStatus());
-                System.out.println(primalJar.getSize());
-                System.out.println(primalJar.getUrl());
-
             }
 
             public void mouseEntered(MouseEvent e) {

@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
@@ -133,7 +134,7 @@ class Download extends Observable implements Runnable {
             }
 
             // Open file and seek to the end of it.
-            file = new RandomAccessFile(getFileName(url), "rw");
+            file = new RandomAccessFile(Launcher.saveDir + File.separator + getFileName(url), "rw");
             file.seek(downloaded);
 
             stream = connection.getInputStream();
@@ -156,6 +157,7 @@ class Download extends Observable implements Runnable {
 
                 // Write buffer to file.
                 file.write(buffer, 0, read);
+
                 downloaded += read;
                 stateChanged();
             }

@@ -5,6 +5,8 @@
       <element id="module-output" name="Primal Launcher" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/mysql/mysql-connector-java/8.0.25/mysql-connector-java-8.0.25.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/google/protobuf/protobuf-java/3.11.4/protobuf-java-3.11.4.jar" path-in-jar="/" />
+      <element id="module-source" name="Primal Launcher" />
+      <element id="dir-copy" path="$PROJECT_DIR$/src/img" />
     </root>
   </artifact>
 </component>
